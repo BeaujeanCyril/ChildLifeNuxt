@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "types": ["nuxt","vite/client","vue"],
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "types",
+    "**/*.ts",
+    "**/*.vue",
+    ".nuxt/types/imports.d.ts",
+  ],
+  "exclude": [".nuxt","node_modules","dist"]
+}

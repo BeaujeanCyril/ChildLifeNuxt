@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["childlife"]
+}
+
+model Child {
+  id        Int      @id @default(autoincrement())
+  name      String
+  emoji     String   @default("🦊")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@schema("childlife")
+}
+
+model WeekGrid {
+  id        Int      @id @default(autoincrement())
+  dayIndex  Int      // 0-6 (Lun-Dim)
+  child0    Int      @default(0)
+  child1    Int      @default(0)
+  weekStart DateTime // Date du lundi de la semaine
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dayIndex, weekStart])
+  @@schema("childlife")
+}
+
+model MonthProgress {
+  id        Int      @id @default(autoincrement())
+  month     Int      // 1-12
+  year      Int
+  shared    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([month, year])
+  @@schema("childlife")
+}
+
+model RewardTier {
+  id        Int      @id @default(autoincrement())
+  threshold Int
+  reward    String
+  unlocked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@schema("childlife")
+}
+
+model Config {
+  id             Int @id @default(autoincrement())
+  dailyBaseLives Int @default(0)
+  dailyMaxLives  Int @default(2)
+  scale          Float @default(1.0)
+  weekendBonus   Int @default(0)
+
+  @@schema("childlife")
+}
