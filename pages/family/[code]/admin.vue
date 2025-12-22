@@ -204,13 +204,18 @@
         <!-- Gestion des recompenses -->
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title">Recompenses</h2>
+            <h2 class="card-title">Recompenses ({{ rewards.length }})</h2>
 
-            <div class="overflow-x-auto">
+            <div v-if="rewards.length === 0" class="text-center py-4 opacity-70">
+              Aucune recompense configuree. Ajoutez-en ci-dessous.
+            </div>
+
+            <div v-else class="overflow-x-auto">
               <table class="table">
                 <thead>
                   <tr>
                     <th>Nom</th>
+                    <th>Description</th>
                     <th>Cout</th>
                     <th>Actions</th>
                   </tr>
@@ -218,6 +223,7 @@
                 <tbody>
                   <tr v-for="reward in rewards" :key="reward.id">
                     <td>{{ reward.name }}</td>
+                    <td class="opacity-70">{{ reward.description || '-' }}</td>
                     <td>{{ reward.cost }} pts</td>
                     <td>
                       <button class="btn btn-sm btn-error" @click="deleteReward(reward.id)">
@@ -231,26 +237,36 @@
 
             <div class="divider">Ajouter une recompense</div>
 
-            <div class="flex gap-2 flex-wrap">
-              <input
-                type="text"
-                class="input input-bordered flex-1"
-                v-model="newReward.name"
-                placeholder="Nom de la recompense"
-              />
-              <input
-                type="number"
-                class="input input-bordered w-24"
-                v-model.number="newReward.cost"
-                placeholder="Cout"
-              />
-              <button
-                class="btn btn-primary"
-                @click="addReward"
-                :disabled="!newReward.name || !newReward.cost"
-              >
-                Ajouter
-              </button>
+            <div class="space-y-2">
+              <div class="flex gap-2 flex-wrap">
+                <input
+                  type="text"
+                  class="input input-bordered flex-1"
+                  v-model="newReward.name"
+                  placeholder="Nom de la recompense"
+                />
+                <input
+                  type="number"
+                  class="input input-bordered w-24"
+                  v-model.number="newReward.cost"
+                  placeholder="Cout"
+                />
+              </div>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  class="input input-bordered flex-1"
+                  v-model="newReward.description"
+                  placeholder="Description (optionnel)"
+                />
+                <button
+                  class="btn btn-primary"
+                  @click="addReward"
+                  :disabled="!newReward.name || !newReward.cost"
+                >
+                  Ajouter
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -282,7 +298,7 @@ const pendingPurchases = ref<any[]>([])
 const weekGrids = ref<any[]>([])
 
 const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const newReward = reactive({ name: '', cost: 0 })
+const newReward = reactive({ name: '', cost: 0, description: '' })
 
 // Computed pour le total de la semaine
 const weekTotal = computed(() =>
@@ -511,12 +527,14 @@ async function addReward() {
       body: {
         name: newReward.name,
         cost: newReward.cost,
+        description: newReward.description || null,
         adminPin: adminPin.value
       }
     })
     rewards.value.push(reward)
     newReward.name = ''
     newReward.cost = 0
+    newReward.description = ''
   } catch (e: any) {
     alert(e.data?.message || 'Erreur')
   }
