@@ -209,10 +209,10 @@
 import { reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNuxtApp } from 'nuxt/app'
-import StarProgress from "../../components/StarProgress.vue"
-import RewardTiers from "../../components/RewardTiers.vue"
-import { useTheme } from '../../composables/useTheme'
-import { useFamilyState } from '../../composables/useFamilyState'
+import StarProgress from "~/components/StarProgress.vue"
+import RewardTiers from "~/components/RewardTiers.vue"
+import { useTheme } from '~/composables/useTheme'
+import { useFamilyState } from '~/composables/useFamilyState'
 
 const route = useRoute()
 const code = route.params.code as string
