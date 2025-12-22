@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// Paliers de récompenses mensuels (débloqués par le total de la famille)
 const defaultTiers = [
   { threshold: 5, reward: 'Plaque de Lego' },
   { threshold: 8, reward: 'Acheter des chewing-gum' },
@@ -33,41 +34,75 @@ const defaultTiers = [
   { threshold: 120, reward: 'Parc d\'attraction' }
 ]
 
+// Récompenses individuelles (achetables par les enfants avec leurs points)
+const defaultRewards = [
+  { name: '🍬 Bonbon', cost: 5, description: 'Un bonbon au choix' },
+  { name: '🍪 Gâteau', cost: 10, description: 'Un gâteau ou biscuit' },
+  { name: '🎮 30min jeux vidéo', cost: 15, description: '30 minutes de jeux vidéo supplémentaires' },
+  { name: '📺 Episode série', cost: 15, description: 'Un épisode de série au choix' },
+  { name: '🍕 Pizza maison', cost: 20, description: 'Une pizza maison pour le dîner' },
+  { name: '🎬 Film au choix', cost: 25, description: 'Choisir le film du soir' },
+  { name: '🛒 Petit jouet (5€)', cost: 30, description: 'Un petit jouet jusqu\'à 5€' },
+  { name: '⏰ Coucher tardif', cost: 30, description: 'Se coucher 30min plus tard' },
+  { name: '🎢 Sortie parc', cost: 40, description: 'Une sortie au parc' },
+  { name: '🎁 Cadeau moyen (15€)', cost: 50, description: 'Un cadeau jusqu\'à 15€' },
+  { name: '🍔 Restaurant fast-food', cost: 60, description: 'Un repas au fast-food' },
+  { name: '🎪 Activité spéciale', cost: 75, description: 'Une activité spéciale au choix' },
+  { name: '🎮 Nouveau jeu vidéo', cost: 90, description: 'Un nouveau jeu vidéo' },
+  { name: '🎉 Grande récompense', cost: 100, description: 'Une grande récompense à définir' }
+]
+
 const defaultChildren = [
-  { name: 'Renard', emoji: '🦊' },
-  { name: 'Panda', emoji: '🐼' }
+  { name: 'Renard', emoji: '🦊', position: 0 },
+  { name: 'Panda', emoji: '🐼', position: 1 }
 ]
 
 async function main() {
   console.log('Seeding database...')
 
-  // Create default children if none exist
-  const childCount = await prisma.child.count()
-  if (childCount === 0) {
-    await prisma.child.createMany({ data: defaultChildren })
-    console.log(`Created ${defaultChildren.length} default children`)
-  } else {
-    console.log(`${childCount} children already exist`)
-  }
+  // Vérifier si une famille de demo existe déjà
+  const demoFamily = await prisma.family.findUnique({ where: { code: '123456' } })
 
-  // Create default tiers if none exist
-  const tierCount = await prisma.rewardTier.count()
-  if (tierCount === 0) {
-    await prisma.rewardTier.createMany({ data: defaultTiers })
-    console.log(`Created ${defaultTiers.length} default tiers`)
-  } else {
-    console.log(`${tierCount} tiers already exist`)
-  }
+  if (!demoFamily) {
+    console.log('Creating demo family...')
 
-  // Create default config if none exists
-  const configCount = await prisma.config.count()
-  if (configCount === 0) {
-    await prisma.config.create({
-      data: { dailyBaseLives: 0, dailyMaxLives: 2, scale: 1.0, weekendBonus: 0 }
+    const family = await prisma.family.create({
+      data: {
+        name: 'Famille Demo',
+        code: '123456',
+        adminPin: '0000',
+        children: {
+          create: defaultChildren
+        },
+        config: {
+          create: {
+            dailyBaseLives: 0,
+            dailyMaxLives: 2,
+            scale: 1.0,
+            weekendBonus: 0
+          }
+        },
+        rewardTiers: {
+          create: defaultTiers
+        },
+        rewards: {
+          create: defaultRewards
+        }
+      },
+      include: {
+        children: true,
+        rewards: true,
+        rewardTiers: true
+      }
     })
-    console.log('Created default config')
+
+    console.log(`Created demo family "${family.name}" with code: ${family.code}`)
+    console.log(`- ${family.children.length} children`)
+    console.log(`- ${family.rewards.length} rewards`)
+    console.log(`- ${family.rewardTiers.length} reward tiers`)
+    console.log(`- Admin PIN: 0000`)
   } else {
-    console.log('Config already exists')
+    console.log(`Demo family already exists (code: ${demoFamily.code})`)
   }
 
   console.log('Seeding completed!')
