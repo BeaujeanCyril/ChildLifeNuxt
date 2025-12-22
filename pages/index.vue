@@ -89,10 +89,10 @@
 
           <div class="form-control">
             <input
-              type="text"
+              type="password"
               v-model="joinCode"
               class="input input-bordered text-center text-2xl tracking-widest"
-              placeholder="000000"
+              placeholder="******"
               maxlength="6"
               @input="joinCode = joinCode.replace(/\D/g, '')"
               @keyup.enter="joinFamily"
