@@ -66,6 +66,61 @@
     <!-- Dashboard admin -->
     <template v-else>
       <div class="max-w-2xl mx-auto space-y-6">
+        <!-- Grille de la semaine -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <h2 class="card-title">Vies de la semaine</h2>
+              <div class="badge badge-accent">Total: {{ weekTotal }}</div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="table table-zebra w-full mt-2">
+                <thead>
+                  <tr>
+                    <th>Jour</th>
+                    <th v-for="child in children" :key="child.id">{{ child.name }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(label, dayIndex) in days" :key="dayIndex">
+                    <td class="font-bold">{{ label }}</td>
+                    <td v-for="child in children" :key="child.id">
+                      <div class="flex items-center gap-1">
+                        <button
+                          class="btn btn-xs btn-ghost"
+                          @click="decrementLives(dayIndex, child.id)"
+                          :disabled="getLives(dayIndex, child.id) <= 0"
+                        >-</button>
+                        <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
+                          {{ getLives(dayIndex, child.id) }}
+                        </span>
+                        <button
+                          class="btn btn-xs btn-success"
+                          @click="incrementLives(dayIndex, child.id, 1)"
+                        >+1</button>
+                        <button
+                          class="btn btn-xs btn-primary"
+                          @click="incrementLives(dayIndex, child.id, 2)"
+                        >+2</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+              <button class="btn btn-warning btn-sm" @click="closeWeek">
+                Cloturer la semaine
+              </button>
+              <button class="btn btn-ghost btn-sm" @click="resetWeek">
+                Reinitialiser
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Demandes en attente -->
         <div v-if="pendingPurchases.length > 0" class="card bg-warning/20 shadow-xl">
           <div class="card-body">
@@ -207,7 +262,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -224,8 +279,97 @@ const familyData = reactive({ id: 0, name: '', code: '' })
 const children = ref<any[]>([])
 const rewards = ref<any[]>([])
 const pendingPurchases = ref<any[]>([])
+const weekGrids = ref<any[]>([])
 
+const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const newReward = reactive({ name: '', cost: 0 })
+
+// Computed pour le total de la semaine
+const weekTotal = computed(() =>
+  weekGrids.value.reduce((sum, entry) => sum + (entry.lives || 0), 0)
+)
+
+// Fonction pour obtenir les vies d'un jour/enfant
+function getLives(dayIndex: number, childId: number): number {
+  const entry = weekGrids.value.find(w => w.dayIndex === dayIndex && w.childId === childId)
+  return entry?.lives || 0
+}
+
+// Incrementer les vies
+async function incrementLives(dayIndex: number, childId: number, amount: number) {
+  const currentLives = getLives(dayIndex, childId)
+  const newLives = currentLives + amount
+
+  // Mettre a jour localement
+  const existing = weekGrids.value.find(w => w.dayIndex === dayIndex && w.childId === childId)
+  if (existing) {
+    existing.lives = newLives
+  } else {
+    weekGrids.value.push({ dayIndex, childId, lives: newLives })
+  }
+
+  // Sauvegarder sur le serveur
+  try {
+    await $fetch(`/api/family/${code}`, {
+      method: 'POST',
+      body: { weekGrids: weekGrids.value }
+    })
+  } catch (e) {
+    console.error('Erreur sauvegarde vies:', e)
+  }
+}
+
+// Decrementer les vies
+async function decrementLives(dayIndex: number, childId: number) {
+  const currentLives = getLives(dayIndex, childId)
+  if (currentLives <= 0) return
+
+  const newLives = currentLives - 1
+
+  const existing = weekGrids.value.find(w => w.dayIndex === dayIndex && w.childId === childId)
+  if (existing) {
+    existing.lives = newLives
+  }
+
+  try {
+    await $fetch(`/api/family/${code}`, {
+      method: 'POST',
+      body: { weekGrids: weekGrids.value }
+    })
+  } catch (e) {
+    console.error('Erreur sauvegarde vies:', e)
+  }
+}
+
+// Cloturer la semaine
+async function closeWeek() {
+  if (!confirm('Cloturer la semaine et ajouter les points au total mensuel ?')) return
+
+  try {
+    const response = await $fetch(`/api/family/${code}/week/close`, {
+      method: 'POST'
+    }) as any
+    alert(`Semaine cloturee ! ${response.weekTotal} points ajoutes. Total mensuel: ${response.monthTotal}`)
+    weekGrids.value = []
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+  }
+}
+
+// Reinitialiser la semaine
+async function resetWeek() {
+  if (!confirm('Reinitialiser la grille de la semaine ?')) return
+
+  weekGrids.value = []
+  try {
+    await $fetch(`/api/family/${code}`, {
+      method: 'POST',
+      body: { weekGrids: [] }
+    })
+  } catch (e) {
+    console.error('Erreur reset semaine:', e)
+  }
+}
 
 onMounted(async () => {
   // Verifier si la famille a un admin PIN configure
@@ -276,6 +420,7 @@ async function login() {
     children.value = response.children
     rewards.value = response.rewards
     pendingPurchases.value = response.pendingPurchases
+    weekGrids.value = response.weekGrids || []
     isLoggedIn.value = true
   } catch (e: any) {
     loginError.value = e.data?.message || 'Erreur de connexion'

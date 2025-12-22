@@ -5,14 +5,14 @@
       <h1 class="text-4xl font-black tracking-widest mb-2">
         <span class="text-primary drop-shadow">MISSION COOP</span>
       </h1>
-      <p class="opacity-70">Étoiles partagées - Paliers mensuels</p>
+      <p class="opacity-70">Etoiles partagees - Paliers mensuels</p>
     </header>
 
     <div class="max-w-md mx-auto space-y-6">
-      <!-- Créer une famille -->
+      <!-- Creer une famille -->
       <section class="card bg-base-200 shadow-xl">
         <div class="card-body">
-          <h2 class="card-title text-2xl">Créer une famille</h2>
+          <h2 class="card-title text-2xl">Creer une famille</h2>
 
           <div class="form-control">
             <label class="label">
@@ -26,6 +26,23 @@
             />
           </div>
 
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Code PIN famille (6 chiffres)</span>
+            </label>
+            <input
+              type="text"
+              v-model="familyPin"
+              class="input input-bordered text-center text-2xl tracking-widest"
+              placeholder="000000"
+              maxlength="6"
+              @input="familyPin = familyPin.replace(/\D/g, '')"
+            />
+            <label class="label">
+              <span class="label-text-alt opacity-70">Ce code permettra a tous de rejoindre la famille</span>
+            </label>
+          </div>
+
           <div class="divider">Enfants</div>
 
           <div v-for="(child, i) in newChildren" :key="i" class="flex gap-2 items-center">
@@ -34,7 +51,7 @@
               type="text"
               v-model="child.name"
               class="input input-bordered flex-1"
-              :placeholder="'Prénom enfant ' + (i + 1)"
+              :placeholder="'Prenom enfant ' + (i + 1)"
             />
             <button
               v-if="newChildren.length > 1"
@@ -51,10 +68,10 @@
             <button
               class="btn btn-primary"
               @click="createFamily"
-              :disabled="isCreating || !familyName.trim()"
+              :disabled="isCreating || !familyName.trim() || familyPin.length !== 6"
             >
               <span v-if="isCreating" class="loading loading-spinner loading-sm"></span>
-              Créer la famille
+              Creer la famille
             </button>
           </div>
 
@@ -68,15 +85,16 @@
       <section class="card bg-base-200 shadow-xl">
         <div class="card-body">
           <h2 class="card-title text-2xl">Rejoindre une famille</h2>
-          <p class="opacity-70">Entrez le code à 6 caractères de votre famille</p>
+          <p class="opacity-70">Entrez le code PIN a 6 chiffres de votre famille</p>
 
           <div class="form-control">
             <input
               type="text"
               v-model="joinCode"
-              class="input input-bordered text-center text-2xl tracking-widest uppercase"
-              placeholder="ABC123"
+              class="input input-bordered text-center text-2xl tracking-widest"
+              placeholder="000000"
               maxlength="6"
+              @input="joinCode = joinCode.replace(/\D/g, '')"
               @keyup.enter="joinFamily"
             />
           </div>
@@ -129,6 +147,7 @@ const router = useRouter()
 
 // Create family
 const familyName = ref('')
+const familyPin = ref('')
 const newChildren = reactive([
   { name: '', emoji: '🦊' },
   { name: '', emoji: '🐼' }
@@ -170,10 +189,14 @@ function selectEmoji(emoji: string) {
 
 async function createFamily() {
   if (!familyName.value.trim()) return
+  if (familyPin.value.length !== 6) {
+    createError.value = 'Le code PIN doit contenir 6 chiffres'
+    return
+  }
 
   const validChildren = newChildren.filter(c => c.name.trim())
   if (validChildren.length === 0) {
-    createError.value = 'Ajoutez au moins un enfant avec un prénom'
+    createError.value = 'Ajoutez au moins un enfant avec un prenom'
     return
   }
 
@@ -185,6 +208,7 @@ async function createFamily() {
       method: 'POST',
       body: {
         name: familyName.value.trim(),
+        code: familyPin.value,
         children: validChildren.map(c => ({
           name: c.name.trim(),
           emoji: c.emoji
@@ -194,7 +218,7 @@ async function createFamily() {
 
     router.push('/family/' + family.code)
   } catch (e: any) {
-    createError.value = e.data?.message || 'Erreur lors de la création'
+    createError.value = e.data?.message || 'Erreur lors de la creation'
   } finally {
     isCreating.value = false
   }
@@ -206,14 +230,12 @@ async function joinFamily() {
   isJoining.value = true
   joinError.value = ''
 
-  const code = joinCode.value.toUpperCase()
-
   try {
-    await $fetch('/api/family/' + code)
-    router.push('/family/' + code)
+    await $fetch('/api/family/' + joinCode.value)
+    router.push('/family/' + joinCode.value)
   } catch (e: any) {
     if (e.status === 404) {
-      joinError.value = 'Famille non trouvée. Vérifiez le code.'
+      joinError.value = 'Famille non trouvee. Verifiez le code PIN.'
     } else {
       joinError.value = e.data?.message || 'Erreur lors de la recherche'
     }

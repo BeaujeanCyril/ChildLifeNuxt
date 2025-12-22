@@ -1,17 +1,8 @@
 import prisma from '~/server/utils/db'
 
-function generateCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
-}
-
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { name, children } = body
+  const { name, children, code } = body
 
   if (!name || !children || !Array.isArray(children) || children.length === 0) {
     throw createError({
@@ -20,12 +11,21 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Générer un code unique
-  let code = generateCode()
-  let existing = await prisma.family.findUnique({ where: { code } })
-  while (existing) {
-    code = generateCode()
-    existing = await prisma.family.findUnique({ where: { code } })
+  // Valider le code PIN (6 chiffres)
+  if (!code || !/^\d{6}$/.test(code)) {
+    throw createError({
+      statusCode: 400,
+      message: 'Le code PIN doit contenir exactement 6 chiffres'
+    })
+  }
+
+  // Vérifier que le code n'existe pas déjà
+  const existing = await prisma.family.findUnique({ where: { code } })
+  if (existing) {
+    throw createError({
+      statusCode: 409,
+      message: 'Ce code PIN est déjà utilisé. Choisissez un autre code.'
+    })
   }
 
   // Créer la famille avec les enfants, config et tiers par défaut

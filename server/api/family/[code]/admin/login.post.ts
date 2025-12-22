@@ -48,6 +48,11 @@ export default defineEventHandler(async (event) => {
     orderBy: { createdAt: 'desc' }
   })
 
+  // Recuperer la grille de semaine
+  const weekGrids = await prisma.weekGrid.findMany({
+    where: { familyId: family.id }
+  })
+
   return {
     family: {
       id: family.id,
@@ -57,6 +62,7 @@ export default defineEventHandler(async (event) => {
     children: family.children,
     rewards: family.rewards,
     config: family.config,
-    pendingPurchases
+    pendingPurchases,
+    weekGrids
   }
 })
