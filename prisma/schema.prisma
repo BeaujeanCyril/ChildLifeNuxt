@@ -11,12 +11,37 @@ datasource db {
   schemas  = ["childlife"]
 }
 
+model Family {
+  id           Int      @id @default(autoincrement())
+  name         String
+  code         String   @unique // Code unique pour rejoindre la famille (6 chars)
+  adminPin     String?  // PIN admin pour les parents (4 chiffres)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  children      Child[]
+  weekGrids     WeekGrid[]
+  monthProgress MonthProgress[]
+  rewardTiers   RewardTier[]
+  rewards       Reward[]
+  config        Config?
+
+  @@schema("childlife")
+}
+
 model Child {
   id        Int      @id @default(autoincrement())
   name      String
   emoji     String   @default("🦊")
+  pin       String?  // PIN enfant (4 chiffres)
+  points    Int      @default(0) // Points actuels de l'enfant
+  position  Int      @default(0) // Position dans la famille (0, 1, 2...)
+  familyId  Int
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  purchases RewardPurchase[]
 
   @@schema("childlife")
 }
@@ -24,13 +49,15 @@ model Child {
 model WeekGrid {
   id        Int      @id @default(autoincrement())
   dayIndex  Int      // 0-6 (Lun-Dim)
-  child0    Int      @default(0)
-  child1    Int      @default(0)
+  childId   Int      // ID de l'enfant
+  lives     Int      @default(0) // Nombre de vies pour ce jour
+  familyId  Int
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   weekStart DateTime // Date du lundi de la semaine
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([dayIndex, weekStart])
+  @@unique([dayIndex, childId, weekStart, familyId])
   @@schema("childlife")
 }
 
@@ -39,10 +66,12 @@ model MonthProgress {
   month     Int      // 1-12
   year      Int
   shared    Int      @default(0)
+  familyId  Int
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([month, year])
+  @@unique([month, year, familyId])
   @@schema("childlife")
 }
 
@@ -51,18 +80,54 @@ model RewardTier {
   threshold Int
   reward    String
   unlocked  Boolean  @default(false)
+  familyId  Int
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@schema("childlife")
 }
 
+// Recompenses achetables definies par les parents
+model Reward {
+  id          Int      @id @default(autoincrement())
+  name        String   // Nom de la recompense
+  cost        Int      // Cout en points
+  description String?  // Description optionnelle
+  available   Boolean  @default(true) // Disponible ou non
+  familyId    Int
+  family      Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchases RewardPurchase[]
+
+  @@schema("childlife")
+}
+
+// Historique des achats de recompenses
+model RewardPurchase {
+  id          Int      @id @default(autoincrement())
+  childId     Int
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  rewardId    Int
+  reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  pointsSpent Int      // Points depenses
+  status      String   @default("pending") // pending, approved, rejected, claimed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@schema("childlife")
+}
+
 model Config {
-  id             Int @id @default(autoincrement())
-  dailyBaseLives Int @default(0)
-  dailyMaxLives  Int @default(2)
-  scale          Float @default(1.0)
-  weekendBonus   Int @default(0)
+  id             Int    @id @default(autoincrement())
+  dailyBaseLives Int    @default(0)
+  dailyMaxLives  Int    @default(2)
+  scale          Float  @default(1.0)
+  weekendBonus   Int    @default(0)
+  familyId       Int    @unique
+  family         Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
   @@schema("childlife")
 }

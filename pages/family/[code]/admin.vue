@@ -1,0 +1,405 @@
+<template>
+  <main class="wrap">
+    <header class="text-center my-6">
+      <NuxtLink :to="'/family/' + code" class="btn btn-ghost btn-sm mb-2">← Retour</NuxtLink>
+      <h1 class="text-3xl font-black">
+        <span class="text-primary">Administration</span>
+      </h1>
+    </header>
+
+    <!-- Setup PIN admin (premiere fois) -->
+    <div v-if="needsSetup" class="max-w-sm mx-auto">
+      <div class="card bg-base-200 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Configuration initiale</h2>
+          <p class="opacity-70">Choisissez un code PIN admin (4 chiffres)</p>
+
+          <input
+            type="text"
+            maxlength="4"
+            class="input input-bordered text-center text-2xl tracking-widest"
+            v-model="setupPin"
+            placeholder="0000"
+          />
+
+          <button
+            class="btn btn-primary"
+            @click="setupAdmin"
+            :disabled="setupPin.length !== 4 || isLoading"
+          >
+            Configurer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login -->
+    <div v-else-if="!isLoggedIn" class="max-w-sm mx-auto">
+      <div class="card bg-base-200 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Connexion admin</h2>
+          <p class="opacity-70">Entrez le code PIN administrateur</p>
+
+          <input
+            type="password"
+            maxlength="4"
+            class="input input-bordered text-center text-2xl tracking-widest"
+            v-model="adminPin"
+            placeholder="****"
+            @keyup.enter="login"
+          />
+
+          <div v-if="loginError" class="alert alert-error">{{ loginError }}</div>
+
+          <button
+            class="btn btn-primary"
+            @click="login"
+            :disabled="adminPin.length !== 4 || isLoading"
+          >
+            <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
+            Entrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard admin -->
+    <template v-else>
+      <div class="max-w-2xl mx-auto space-y-6">
+        <!-- Demandes en attente -->
+        <div v-if="pendingPurchases.length > 0" class="card bg-warning/20 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Demandes en attente</h2>
+
+            <div class="space-y-3">
+              <div
+                v-for="purchase in pendingPurchases"
+                :key="purchase.id"
+                class="flex items-center justify-between p-3 bg-base-100 rounded-lg"
+              >
+                <div>
+                  <span class="font-bold">{{ purchase.child.name }}</span>
+                  demande
+                  <span class="font-bold">{{ purchase.reward.name }}</span>
+                  <span class="text-sm opacity-70 ml-2">({{ purchase.pointsSpent }} pts)</span>
+                </div>
+                <div class="flex gap-2">
+                  <button class="btn btn-sm btn-success" @click="approvePurchase(purchase.id, 'approve')">
+                    Approuver
+                  </button>
+                  <button class="btn btn-sm btn-error" @click="approvePurchase(purchase.id, 'reject')">
+                    Refuser
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gestion des enfants -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Enfants</h2>
+
+            <div class="overflow-x-auto">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Enfant</th>
+                    <th>Points</th>
+                    <th>PIN</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="child in children" :key="child.id">
+                    <td>
+                      <span class="text-xl mr-2">{{ child.emoji }}</span>
+                      {{ child.name }}
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        class="input input-bordered input-sm w-24"
+                        :value="child.points"
+                        @change="updateChildPoints(child, $event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        maxlength="4"
+                        class="input input-bordered input-sm w-20 text-center"
+                        :value="child.pin || ''"
+                        placeholder="----"
+                        @change="updateChildPin(child, $event)"
+                      />
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-ghost" @click="addPoints(child, 1)">+1</button>
+                      <button class="btn btn-sm btn-ghost" @click="addPoints(child, 5)">+5</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gestion des recompenses -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Recompenses</h2>
+
+            <div class="overflow-x-auto">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Cout</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="reward in rewards" :key="reward.id">
+                    <td>{{ reward.name }}</td>
+                    <td>{{ reward.cost }} pts</td>
+                    <td>
+                      <button class="btn btn-sm btn-error" @click="deleteReward(reward.id)">
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="divider">Ajouter une recompense</div>
+
+            <div class="flex gap-2 flex-wrap">
+              <input
+                type="text"
+                class="input input-bordered flex-1"
+                v-model="newReward.name"
+                placeholder="Nom de la recompense"
+              />
+              <input
+                type="number"
+                class="input input-bordered w-24"
+                v-model.number="newReward.cost"
+                placeholder="Cout"
+              />
+              <button
+                class="btn btn-primary"
+                @click="addReward"
+                :disabled="!newReward.name || !newReward.cost"
+              >
+                Ajouter
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-ghost w-full" @click="logout">Deconnexion</button>
+      </div>
+    </template>
+  </main>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const code = route.params.code as string
+
+const needsSetup = ref(false)
+const setupPin = ref('')
+const adminPin = ref('')
+const isLoading = ref(false)
+const loginError = ref('')
+const isLoggedIn = ref(false)
+
+const familyData = reactive({ id: 0, name: '', code: '' })
+const children = ref<any[]>([])
+const rewards = ref<any[]>([])
+const pendingPurchases = ref<any[]>([])
+
+const newReward = reactive({ name: '', cost: 0 })
+
+onMounted(async () => {
+  // Verifier si la famille a un admin PIN configure
+  try {
+    const family = await $fetch(`/api/family/${code}`) as any
+    if (!family.adminPin) {
+      needsSetup.value = true
+    }
+  } catch (e) {
+    // Famille non trouvee
+  }
+})
+
+async function setupAdmin() {
+  if (setupPin.value.length !== 4) return
+
+  isLoading.value = true
+  try {
+    await $fetch(`/api/family/${code}/admin/setup`, {
+      method: 'POST',
+      body: { adminPin: setupPin.value }
+    })
+    adminPin.value = setupPin.value
+    needsSetup.value = false
+    await login()
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function login() {
+  if (adminPin.value.length !== 4) return
+
+  isLoading.value = true
+  loginError.value = ''
+
+  try {
+    const response = await $fetch(`/api/family/${code}/admin/login`, {
+      method: 'POST',
+      body: { pin: adminPin.value }
+    }) as any
+
+    familyData.id = response.family.id
+    familyData.name = response.family.name
+    familyData.code = response.family.code
+    children.value = response.children
+    rewards.value = response.rewards
+    pendingPurchases.value = response.pendingPurchases
+    isLoggedIn.value = true
+  } catch (e: any) {
+    loginError.value = e.data?.message || 'Erreur de connexion'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function approvePurchase(purchaseId: number, action: string) {
+  try {
+    await $fetch(`/api/family/${code}/purchases/${purchaseId}/approve`, {
+      method: 'POST',
+      body: { adminPin: adminPin.value, action }
+    })
+    pendingPurchases.value = pendingPurchases.value.filter(p => p.id !== purchaseId)
+
+    // Recharger les enfants pour mettre a jour les points
+    const response = await $fetch(`/api/family/${code}/admin/login`, {
+      method: 'POST',
+      body: { pin: adminPin.value }
+    }) as any
+    children.value = response.children
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+  }
+}
+
+async function updateChildPoints(child: any, event: Event) {
+  const input = event.target as HTMLInputElement
+  const newPoints = parseInt(input.value) || 0
+
+  try {
+    await $fetch(`/api/family/${code}`, {
+      method: 'POST',
+      body: {
+        children: [{ ...child, points: newPoints }]
+      }
+    })
+    child.points = newPoints
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function updateChildPin(child: any, event: Event) {
+  const input = event.target as HTMLInputElement
+  const newPin = input.value
+
+  if (newPin.length !== 4 && newPin.length !== 0) {
+    alert('Le PIN doit contenir 4 chiffres')
+    input.value = child.pin || ''
+    return
+  }
+
+  try {
+    await $fetch(`/api/family/${code}/child/${child.id}/setpin`, {
+      method: 'POST',
+      body: { pin: newPin, adminPin: adminPin.value }
+    })
+    child.pin = newPin
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+    input.value = child.pin || ''
+  }
+}
+
+async function addPoints(child: any, amount: number) {
+  const newPoints = (child.points || 0) + amount
+  try {
+    await $fetch(`/api/family/${code}`, {
+      method: 'POST',
+      body: {
+        children: [{ ...child, points: newPoints }]
+      }
+    })
+    child.points = newPoints
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function addReward() {
+  if (!newReward.name || !newReward.cost) return
+
+  try {
+    const reward = await $fetch(`/api/family/${code}/rewards/add`, {
+      method: 'POST',
+      body: {
+        name: newReward.name,
+        cost: newReward.cost,
+        adminPin: adminPin.value
+      }
+    })
+    rewards.value.push(reward)
+    newReward.name = ''
+    newReward.cost = 0
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+  }
+}
+
+async function deleteReward(rewardId: number) {
+  if (!confirm('Supprimer cette recompense ?')) return
+
+  try {
+    await $fetch(`/api/family/${code}/rewards/${rewardId}`, {
+      method: 'DELETE',
+      body: { adminPin: adminPin.value }
+    })
+    rewards.value = rewards.value.filter(r => r.id !== rewardId)
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+  }
+}
+
+function logout() {
+  isLoggedIn.value = false
+  adminPin.value = ''
+}
+</script>
+
+<style>
+.wrap {
+  min-height: 100vh;
+  padding: 1rem 1.25rem;
+}
+</style>

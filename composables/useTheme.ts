@@ -1,14 +1,32 @@
-import { useHead, useState } from 'nuxt/app'
-import { watchEffect } from 'vue'
-import {process} from "std-env";
+import { useState } from 'nuxt/app'
+import { watch, onMounted } from 'vue'
 
 export const useTheme = () => {
-    const theme = useState<string>('theme', () => 'cyberpunk')
+  const theme = useState<string>('theme', () => 'cyberpunk')
 
-    watchEffect(() => {
-        useHead({ htmlAttrs: { 'data-theme': theme.value } })
-        if (process.client) localStorage.setItem('theme', theme.value)
-    })
+  // Appliquer le theme au document HTML
+  function applyTheme(themeName: string) {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', themeName)
+      localStorage.setItem('theme', themeName)
+    }
+  }
 
-    return { theme }
+  // Charger le theme sauvegarde
+  onMounted(() => {
+    if (typeof localStorage !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme) {
+        theme.value = savedTheme
+      }
+    }
+    applyTheme(theme.value)
+  })
+
+  // Appliquer quand le theme change
+  watch(theme, (newTheme) => {
+    applyTheme(newTheme)
+  })
+
+  return { theme }
 }
