@@ -9,8 +9,16 @@ function getWeekStart(date: Date): Date {
   return d
 }
 
+function formatWeekLabel(date: Date): string {
+  const endOfWeek = new Date(date)
+  endOfWeek.setDate(endOfWeek.getDate() + 6)
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  return `${date.toLocaleDateString('fr-FR', options)} - ${endOfWeek.toLocaleDateString('fr-FR', options)}`
+}
+
 export default defineEventHandler(async (event) => {
   const code = getRouterParam(event, 'code')
+  const query = getQuery(event)
 
   if (!code) {
     throw createError({
@@ -39,14 +47,32 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Recuperer les donnees de la semaine en cours
-  const weekStart = getWeekStart(new Date())
+  // Determiner quelle semaine afficher (par defaut: semaine courante)
+  let weekStart: Date
+  const currentWeekStart = getWeekStart(new Date())
+
+  if (query.week) {
+    weekStart = new Date(query.week as string)
+    weekStart.setHours(0, 0, 0, 0)
+  } else {
+    weekStart = currentWeekStart
+  }
+
   const weekGrids = await prisma.weekGrid.findMany({
     where: {
       familyId: family.id,
       weekStart
     }
   })
+
+  // Calculer semaine precedente et suivante
+  const prevWeekStart = new Date(weekStart)
+  prevWeekStart.setDate(prevWeekStart.getDate() - 7)
+  const nextWeekStart = new Date(weekStart)
+  nextWeekStart.setDate(nextWeekStart.getDate() + 7)
+
+  // Verifier si on est sur la semaine courante
+  const isCurrentWeek = weekStart.getTime() === currentWeekStart.getTime()
 
   // Recuperer le progres du mois en cours
   const now = new Date()
@@ -67,8 +93,17 @@ export default defineEventHandler(async (event) => {
   return {
     ...familyData,
     children: childrenWithoutPin,
-    adminPin: adminPin ? true : false, // Juste indiquer si un admin PIN existe
+    adminPin: adminPin ? true : false,
     weekGrids,
-    monthProgress: monthProgress || { shared: 0 }
+    monthProgress: monthProgress || { shared: 0 },
+    // Infos navigation semaine
+    weekInfo: {
+      weekStart: weekStart.toISOString(),
+      weekLabel: formatWeekLabel(weekStart),
+      prevWeek: prevWeekStart.toISOString(),
+      nextWeek: nextWeekStart.toISOString(),
+      isCurrentWeek,
+      canGoNext: !isCurrentWeek // Ne pas naviguer au-dela de la semaine courante
+    }
   }
 })

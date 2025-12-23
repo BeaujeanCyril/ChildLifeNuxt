@@ -66,11 +66,31 @@
     <!-- Dashboard admin -->
     <template v-else>
       <div class="max-w-2xl mx-auto space-y-6">
-        <!-- Grille de la semaine -->
+        <!-- Navigation semaine -->
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-2">
               <h2 class="card-title">Vies de la semaine</h2>
+              <div class="flex items-center gap-2">
+                <button class="btn btn-sm btn-ghost" @click="goToPrevWeek">
+                  ← Precedente
+                </button>
+                <span class="badge badge-lg">{{ weekLabel }}</span>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="goToNextWeek"
+                  :disabled="isCurrentWeek"
+                >
+                  Suivante →
+                </button>
+                <button
+                  v-if="!isCurrentWeek"
+                  class="btn btn-sm btn-primary"
+                  @click="goToCurrentWeek"
+                >
+                  Aujourd'hui
+                </button>
+              </div>
               <div class="badge badge-accent">Total: {{ weekTotal }}</div>
             </div>
 
@@ -87,22 +107,29 @@
                     <td class="font-bold">{{ label }}</td>
                     <td v-for="child in children" :key="child.id">
                       <div class="flex items-center gap-1">
-                        <button
-                          class="btn btn-xs btn-ghost"
-                          @click="decrementLives(dayIndex, child.id)"
-                          :disabled="getLives(dayIndex, child.id) <= 0"
-                        >-</button>
-                        <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
-                          {{ getLives(dayIndex, child.id) }}
-                        </span>
-                        <button
-                          class="btn btn-xs btn-success"
-                          @click="incrementLives(dayIndex, child.id, 1)"
-                        >+1</button>
-                        <button
-                          class="btn btn-xs btn-primary"
-                          @click="incrementLives(dayIndex, child.id, 2)"
-                        >+2</button>
+                        <template v-if="isCurrentWeek">
+                          <button
+                            class="btn btn-xs btn-ghost"
+                            @click="decrementLives(dayIndex, child.id)"
+                            :disabled="getLives(dayIndex, child.id) <= 0"
+                          >-</button>
+                          <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
+                            {{ getLives(dayIndex, child.id) }}
+                          </span>
+                          <button
+                            class="btn btn-xs btn-success"
+                            @click="incrementLives(dayIndex, child.id, 1)"
+                          >+1</button>
+                          <button
+                            class="btn btn-xs btn-primary"
+                            @click="incrementLives(dayIndex, child.id, 2)"
+                          >+2</button>
+                        </template>
+                        <template v-else>
+                          <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
+                            {{ getLives(dayIndex, child.id) }}
+                          </span>
+                        </template>
                       </div>
                     </td>
                   </tr>
@@ -110,7 +137,7 @@
               </table>
             </div>
 
-            <div class="flex gap-2 mt-4">
+            <div v-if="isCurrentWeek" class="flex gap-2 mt-4">
               <button class="btn btn-warning btn-sm" @click="closeWeek">
                 Cloturer la semaine
               </button>
@@ -118,6 +145,42 @@
                 Reinitialiser
               </button>
             </div>
+            <div v-else class="alert alert-info mt-4">
+              Semaine passee - Consultation uniquement
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Statistiques</h2>
+
+            <div v-if="statsLoading" class="flex justify-center py-8">
+              <span class="loading loading-spinner loading-lg"></span>
+            </div>
+
+            <template v-else-if="stats">
+              <!-- Graphique par semaine -->
+              <div class="mb-6">
+                <h3 class="font-bold mb-2">Points par semaine</h3>
+                <div class="h-64">
+                  <Line v-if="weeklyChartData" :data="weeklyChartData" :options="chartOptions" />
+                </div>
+              </div>
+
+              <!-- Graphique mensuel -->
+              <div>
+                <h3 class="font-bold mb-2">Total mensuel</h3>
+                <div class="h-64">
+                  <Bar v-if="monthlyChartData" :data="monthlyChartData" :options="chartOptions" />
+                </div>
+              </div>
+            </template>
+
+            <button class="btn btn-sm btn-ghost mt-4" @click="loadStats">
+              Actualiser les stats
+            </button>
           </div>
         </div>
 
@@ -280,6 +343,20 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { Line, Bar } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  PointElement
+} from 'chart.js'
+
+ChartJS.register(Title, Tooltip, Legend, LineElement, BarElement, CategoryScale, LinearScale, PointElement)
 
 const route = useRoute()
 const code = route.params.code as string
@@ -297,8 +374,71 @@ const rewards = ref<any[]>([])
 const pendingPurchases = ref<any[]>([])
 const weekGrids = ref<any[]>([])
 
+// Navigation semaines
+const weekLabel = ref('')
+const isCurrentWeek = ref(true)
+const currentWeekParam = ref<string | null>(null)
+const weekInfo = ref<any>(null)
+
+// Stats
+const stats = ref<any>(null)
+const statsLoading = ref(false)
+
 const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const newReward = reactive({ name: '', cost: 0, description: '' })
+
+// Options graphiques
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom' as const
+    }
+  }
+}
+
+// Couleurs pour les enfants
+const childColors = [
+  'rgb(255, 99, 132)',
+  'rgb(54, 162, 235)',
+  'rgb(255, 205, 86)',
+  'rgb(75, 192, 192)',
+  'rgb(153, 102, 255)',
+  'rgb(255, 159, 64)'
+]
+
+// Graphique hebdomadaire
+const weeklyChartData = computed(() => {
+  if (!stats.value?.weeks?.length) return null
+
+  const labels = stats.value.weeks.map((w: any) => w.label)
+  const datasets = stats.value.children.map((child: any, index: number) => ({
+    label: `${child.emoji} ${child.name}`,
+    data: stats.value.weeks.map((w: any) => w.children[child.id] || 0),
+    borderColor: childColors[index % childColors.length],
+    backgroundColor: childColors[index % childColors.length].replace('rgb', 'rgba').replace(')', ', 0.5)'),
+    tension: 0.3
+  }))
+
+  return { labels, datasets }
+})
+
+// Graphique mensuel
+const monthlyChartData = computed(() => {
+  if (!stats.value?.months?.length) return null
+
+  return {
+    labels: stats.value.months.map((m: any) => m.label),
+    datasets: [{
+      label: 'Total mensuel',
+      data: stats.value.months.map((m: any) => m.shared),
+      backgroundColor: 'rgba(75, 192, 192, 0.5)',
+      borderColor: 'rgb(75, 192, 192)',
+      borderWidth: 1
+    }]
+  }
+})
 
 // Computed pour le total de la semaine
 const weekTotal = computed(() =>
@@ -387,6 +527,54 @@ async function resetWeek() {
   }
 }
 
+// Navigation entre semaines
+async function loadWeekData(weekParam?: string) {
+  try {
+    const url = weekParam
+      ? `/api/family/${code}?week=${weekParam}`
+      : `/api/family/${code}`
+    const family = await $fetch(url) as any
+
+    weekGrids.value = family.weekGrids || []
+    if (family.weekInfo) {
+      weekInfo.value = family.weekInfo
+      weekLabel.value = family.weekInfo.weekLabel
+      isCurrentWeek.value = family.weekInfo.isCurrentWeek
+      currentWeekParam.value = family.weekInfo.weekStart
+    }
+  } catch (e) {
+    console.error('Erreur chargement semaine:', e)
+  }
+}
+
+async function goToPrevWeek() {
+  if (weekInfo.value?.prevWeek) {
+    await loadWeekData(weekInfo.value.prevWeek)
+  }
+}
+
+async function goToNextWeek() {
+  if (weekInfo.value?.canGoNext && weekInfo.value?.nextWeek) {
+    await loadWeekData(weekInfo.value.nextWeek)
+  }
+}
+
+async function goToCurrentWeek() {
+  await loadWeekData()
+}
+
+// Charger les statistiques
+async function loadStats() {
+  statsLoading.value = true
+  try {
+    stats.value = await $fetch(`/api/family/${code}/stats`)
+  } catch (e) {
+    console.error('Erreur chargement stats:', e)
+  } finally {
+    statsLoading.value = false
+  }
+}
+
 onMounted(async () => {
   // Verifier si la famille a un admin PIN configure
   try {
@@ -437,7 +625,21 @@ async function login() {
     rewards.value = response.rewards
     pendingPurchases.value = response.pendingPurchases
     weekGrids.value = response.weekGrids || []
+
+    // Charger les infos de semaine
+    if (response.weekInfo) {
+      weekInfo.value = response.weekInfo
+      weekLabel.value = response.weekInfo.weekLabel
+      isCurrentWeek.value = response.weekInfo.isCurrentWeek
+    } else {
+      // Charger les infos de semaine separement
+      await loadWeekData()
+    }
+
     isLoggedIn.value = true
+
+    // Charger les stats
+    loadStats()
   } catch (e: any) {
     loginError.value = e.data?.message || 'Erreur de connexion'
   } finally {

@@ -17,10 +17,12 @@
   "dependencies": {
     "@prisma/client": "^6.19.1",
     "canvas-confetti": "^1.9.3",
+    "chart.js": "^4.5.1",
     "dotenv": "^17.2.3",
     "js-confetti": "^0.13.1",
     "nuxt": "^3.12.0",
-    "prisma": "^6.19.1"
+    "prisma": "^6.19.1",
+    "vue-chartjs": "^5.3.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",

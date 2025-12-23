@@ -10,6 +10,14 @@ type Config = {
   scale: number
   weekendBonus: number
 }
+type WeekInfo = {
+  weekStart: string
+  weekLabel: string
+  prevWeek: string
+  nextWeek: string
+  isCurrentWeek: boolean
+  canGoNext: boolean
+}
 
 interface FamilyState {
   id: number
@@ -20,6 +28,7 @@ interface FamilyState {
   monthProgress: { shared: number }
   rewardTiers: Tier[]
   config: Config
+  weekInfo: WeekInfo
 }
 
 export const useFamilyState = (familyCode: string) => {
@@ -36,19 +45,31 @@ export const useFamilyState = (familyCode: string) => {
       dailyMaxLives: 2,
       scale: 1.0,
       weekendBonus: 0
+    },
+    weekInfo: {
+      weekStart: '',
+      weekLabel: '',
+      prevWeek: '',
+      nextWeek: '',
+      isCurrentWeek: true,
+      canGoNext: false
     }
   })
 
   const isLoading = ref(true)
   const error = ref<string | null>(null)
+  const currentWeek = ref<string | null>(null)
   let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
   // Load family state from API
-  async function load() {
+  async function load(weekParam?: string) {
     isLoading.value = true
     error.value = null
     try {
-      const response = await $fetch<FamilyState>(`/api/family/${familyCode}`)
+      const url = weekParam
+        ? `/api/family/${familyCode}?week=${weekParam}`
+        : `/api/family/${familyCode}`
+      const response = await $fetch<FamilyState & { weekInfo: WeekInfo }>(url)
       if (response) {
         state.id = response.id
         state.name = response.name
@@ -60,6 +81,10 @@ export const useFamilyState = (familyCode: string) => {
         if (response.config) {
           state.config = response.config
         }
+        if (response.weekInfo) {
+          state.weekInfo = response.weekInfo
+          currentWeek.value = response.weekInfo.weekStart
+        }
       }
     } catch (e: any) {
       console.error('Failed to load family:', e)
@@ -68,9 +93,28 @@ export const useFamilyState = (familyCode: string) => {
     isLoading.value = false
   }
 
+  // Navigation entre semaines
+  async function goToPrevWeek() {
+    if (state.weekInfo.prevWeek) {
+      await load(state.weekInfo.prevWeek)
+    }
+  }
+
+  async function goToNextWeek() {
+    if (state.weekInfo.canGoNext && state.weekInfo.nextWeek) {
+      await load(state.weekInfo.nextWeek)
+    }
+  }
+
+  async function goToCurrentWeek() {
+    await load()
+  }
+
   // Save state to API (debounced)
   async function save() {
     if (isLoading.value) return
+    // Ne sauvegarder que si on est sur la semaine courante
+    if (!state.weekInfo.isCurrentWeek) return
 
     if (saveTimeout) clearTimeout(saveTimeout)
     saveTimeout = setTimeout(async () => {
@@ -120,6 +164,9 @@ export const useFamilyState = (familyCode: string) => {
 
   // Actions
   function setLives(dayIndex: number, childId: number, lives: number) {
+    // Ne modifier que si on est sur la semaine courante
+    if (!state.weekInfo.isCurrentWeek) return
+
     const clamped = Math.max(0, Math.min(lives || 0, state.config.dailyMaxLives))
     const existing = state.weekGrids.find(w => w.dayIndex === dayIndex && w.childId === childId)
     if (existing) {
@@ -152,6 +199,7 @@ export const useFamilyState = (familyCode: string) => {
   }
 
   function resetWeek() {
+    if (!state.weekInfo.isCurrentWeek) return
     state.weekGrids = []
     save()
   }
@@ -226,7 +274,7 @@ export const useFamilyState = (familyCode: string) => {
     }
   }
 
-  // Auto-save on changes
+  // Auto-save on changes (seulement si semaine courante)
   watch(() => state.weekGrids, save, { deep: true })
   watch(() => state.config, save, { deep: true })
 
@@ -252,6 +300,9 @@ export const useFamilyState = (familyCode: string) => {
     updateTier,
     addTier,
     removeTier,
-    load
+    load,
+    goToPrevWeek,
+    goToNextWeek,
+    goToCurrentWeek
   }
 }

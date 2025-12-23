@@ -48,10 +48,35 @@ export default defineEventHandler(async (event) => {
     orderBy: { createdAt: 'desc' }
   })
 
-  // Recuperer la grille de semaine
+  // Calculer le debut de la semaine courante
+  function getWeekStart(date: Date): Date {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    d.setDate(diff)
+    d.setHours(0, 0, 0, 0)
+    return d
+  }
+
+  function formatWeekLabel(date: Date): string {
+    const endOfWeek = new Date(date)
+    endOfWeek.setDate(endOfWeek.getDate() + 6)
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+    return `${date.toLocaleDateString('fr-FR', options)} - ${endOfWeek.toLocaleDateString('fr-FR', options)}`
+  }
+
+  const weekStart = getWeekStart(new Date())
+
+  // Recuperer la grille de semaine courante
   const weekGrids = await prisma.weekGrid.findMany({
-    where: { familyId: family.id }
+    where: { familyId: family.id, weekStart }
   })
+
+  // Calculer les infos de navigation
+  const prevWeekStart = new Date(weekStart)
+  prevWeekStart.setDate(prevWeekStart.getDate() - 7)
+  const nextWeekStart = new Date(weekStart)
+  nextWeekStart.setDate(nextWeekStart.getDate() + 7)
 
   return {
     family: {
@@ -63,6 +88,14 @@ export default defineEventHandler(async (event) => {
     rewards: family.rewards,
     config: family.config,
     pendingPurchases,
-    weekGrids
+    weekGrids,
+    weekInfo: {
+      weekStart: weekStart.toISOString(),
+      weekLabel: formatWeekLabel(weekStart),
+      prevWeek: prevWeekStart.toISOString(),
+      nextWeek: nextWeekStart.toISOString(),
+      isCurrentWeek: true,
+      canGoNext: false
+    }
   }
 })
