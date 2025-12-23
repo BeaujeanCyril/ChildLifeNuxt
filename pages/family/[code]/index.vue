@@ -8,9 +8,6 @@
       <h1 class="text-4xl font-black tracking-widest">
         <span class="text-primary drop-shadow">{{ state.name || 'FAMILLE' }}</span>
       </h1>
-      <p class="opacity-70">
-        Code famille: <span class="kbd kbd-sm">{{ state.code }}</span>
-      </p>
       <div class="flex justify-center gap-2 mt-4">
         <NuxtLink :to="`/family/${code}/child`" class="btn btn-secondary btn-sm">
           Espace Enfant

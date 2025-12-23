@@ -15,78 +15,6 @@
     </header>
 
     <div class="max-w-md mx-auto space-y-6">
-      <!-- Creer une famille -->
-      <section class="card bg-base-200 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title text-2xl">Creer une famille</h2>
-
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Nom de la famille</span>
-            </label>
-            <input
-              type="text"
-              v-model="familyName"
-              class="input input-bordered"
-              placeholder="Ex: Famille Dupont"
-            />
-          </div>
-
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Code PIN famille (6 chiffres)</span>
-            </label>
-            <input
-              type="text"
-              v-model="familyPin"
-              class="input input-bordered text-center text-2xl tracking-widest"
-              placeholder="000000"
-              maxlength="6"
-              @input="familyPin = familyPin.replace(/\D/g, '')"
-            />
-            <label class="label">
-              <span class="label-text-alt opacity-70">Ce code permettra a tous de rejoindre la famille</span>
-            </label>
-          </div>
-
-          <div class="divider">Enfants</div>
-
-          <div v-for="(child, i) in newChildren" :key="i" class="flex gap-2 items-center">
-            <button class="btn btn-circle btn-sm" @click="pickEmoji(i)">{{ child.emoji }}</button>
-            <input
-              type="text"
-              v-model="child.name"
-              class="input input-bordered flex-1"
-              :placeholder="'Prenom enfant ' + (i + 1)"
-            />
-            <button
-              v-if="newChildren.length > 1"
-              class="btn btn-error btn-sm btn-circle"
-              @click="removeChild(i)"
-            >x</button>
-          </div>
-
-          <button class="btn btn-ghost btn-sm mt-2" @click="addChild">
-            + Ajouter un enfant
-          </button>
-
-          <div class="card-actions justify-end mt-4">
-            <button
-              class="btn btn-primary"
-              @click="createFamily"
-              :disabled="isCreating || !familyName.trim() || familyPin.length !== 6"
-            >
-              <span v-if="isCreating" class="loading loading-spinner loading-sm"></span>
-              Creer la famille
-            </button>
-          </div>
-
-          <div v-if="createError" class="alert alert-error mt-2">
-            {{ createError }}
-          </div>
-        </div>
-      </section>
-
       <!-- Rejoindre une famille -->
       <section class="card bg-base-200 shadow-xl">
         <div class="card-body">
@@ -121,6 +49,82 @@
           </div>
         </div>
       </section>
+
+      <!-- Creer une famille (accordion ferme) -->
+      <div class="collapse collapse-arrow bg-base-200 shadow-xl">
+        <input type="checkbox" />
+        <div class="collapse-title text-xl font-medium">
+          Creer une nouvelle famille
+        </div>
+        <div class="collapse-content">
+          <div class="space-y-4 pt-2">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Nom de la famille</span>
+              </label>
+              <input
+                type="text"
+                v-model="familyName"
+                class="input input-bordered"
+                placeholder="Ex: Famille Dupont"
+              />
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Code PIN famille (6 chiffres)</span>
+              </label>
+              <input
+                type="text"
+                v-model="familyPin"
+                class="input input-bordered text-center text-2xl tracking-widest"
+                placeholder="000000"
+                maxlength="6"
+                @input="familyPin = familyPin.replace(/\D/g, '')"
+              />
+              <label class="label">
+                <span class="label-text-alt opacity-70">Ce code permettra a tous de rejoindre la famille</span>
+              </label>
+            </div>
+
+            <div class="divider">Enfants</div>
+
+            <div v-for="(child, i) in newChildren" :key="i" class="flex gap-2 items-center">
+              <button class="btn btn-circle btn-sm" @click="pickEmoji(i)">{{ child.emoji }}</button>
+              <input
+                type="text"
+                v-model="child.name"
+                class="input input-bordered flex-1"
+                :placeholder="'Prenom enfant ' + (i + 1)"
+              />
+              <button
+                v-if="newChildren.length > 1"
+                class="btn btn-error btn-sm btn-circle"
+                @click="removeChild(i)"
+              >x</button>
+            </div>
+
+            <button class="btn btn-ghost btn-sm" @click="addChild">
+              + Ajouter un enfant
+            </button>
+
+            <div class="flex justify-end mt-4">
+              <button
+                class="btn btn-primary"
+                @click="createFamily"
+                :disabled="isCreating || !familyName.trim() || familyPin.length !== 6"
+              >
+                <span v-if="isCreating" class="loading loading-spinner loading-sm"></span>
+                Creer la famille
+              </button>
+            </div>
+
+            <div v-if="createError" class="alert alert-error">
+              {{ createError }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Emoji Picker Modal -->
