@@ -182,11 +182,11 @@
                     </td>
                     <td>
                       <input
-                        type="text"
+                        type="password"
                         maxlength="4"
                         class="input input-bordered input-sm w-20 text-center"
                         :value="child.pin || ''"
-                        placeholder="----"
+                        placeholder="****"
                         @change="updateChildPin(child, $event)"
                       />
                     </td>
