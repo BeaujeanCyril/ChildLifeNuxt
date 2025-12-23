@@ -2,6 +2,12 @@
   <main class="wrap">
     <!-- Header -->
     <header class="text-center my-8">
+      <div class="flex justify-center items-center gap-4 mb-2">
+        <a href="https://cyriongames.fr" class="btn btn-ghost btn-sm">
+          <span class="mr-1">&#8592;</span> Portail
+        </a>
+        <ThemeToggle />
+      </div>
       <h1 class="text-4xl font-black tracking-widest mb-2">
         <span class="text-primary drop-shadow">MISSION COOP</span>
       </h1>
