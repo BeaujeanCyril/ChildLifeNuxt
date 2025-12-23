@@ -6,7 +6,7 @@
         <NuxtLink to="/" class="btn btn-ghost btn-sm">← Accueil</NuxtLink>
       </div>
       <h1 class="text-4xl font-black tracking-widest">
-        <span class="text-primary drop-shadow">{{ state.name || 'FAMILLE' }}</span>
+        <span class="text-primary drop-shadow">Famille {{ state.name || '' }}</span>
       </h1>
       <div class="flex justify-center gap-2 mt-4">
         <NuxtLink :to="`/family/${code}/child`" class="btn btn-secondary btn-sm">
@@ -40,7 +40,10 @@
           <div class="card-body">
             <div class="card-title flex items-center gap-3">
               <span class="avatar bg-base-100 text-2xl p-2 rounded-lg">{{ child.emoji }}</span>
-              <span class="text-xl">{{ child.name }}</span>
+              <div class="flex flex-col">
+                <span class="text-xl">{{ child.name }}</span>
+                <span class="text-sm badge badge-primary">{{ child.points || 0 }} pts</span>
+              </div>
             </div>
           </div>
         </div>
@@ -52,7 +55,7 @@
           <div class="card-body">
             <div class="flex items-center justify-between">
               <h2 class="card-title">Semaine en cours</h2>
-              <div class="badge badge-accent">Total semaine: {{ weekTotal }}</div>
+              <div class="badge badge-accent">Total semaine : {{ weekTotal }}</div>
             </div>
 
             <div class="overflow-x-auto">
@@ -83,20 +86,20 @@
         </div>
       </section>
 
-      <!-- Progression mensuelle -->
+      <!-- Progression -->
       <section class="my-4">
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
             <div class="flex items-center justify-between">
-              <h2 class="card-title">Progression mensuelle</h2>
-              <div class="badge badge-outline">Total: {{ state.monthProgress.shared }}</div>
+              <h2 class="card-title">Progression</h2>
+              <div class="badge badge-outline">Total : {{ state.monthProgress.shared }}</div>
             </div>
 
             <StarProgress :value="state.monthProgress.shared" :max="nextTierThreshold || state.monthProgress.shared || 1" />
 
             <div class="mt-2 opacity-70">
               <template v-if="nextTier">
-                Prochain palier a <span class="kbd kbd-md">{{ nextTier.threshold }}</span> — « {{ nextTier.reward }} »
+                Prochain palier à <span class="kbd kbd-md">{{ nextTier.threshold }}</span> — « {{ nextTier.reward }} »
               </template>
               <template v-else>
                 Tous les paliers atteints !
@@ -108,18 +111,18 @@
         </div>
       </section>
 
-      <!-- Liste des recompenses (lecture seule) -->
+      <!-- Liste des récompenses (lecture seule) -->
       <section class="my-4">
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title">Paliers de recompenses</h2>
+            <h2 class="card-title">Paliers de récompenses</h2>
 
             <div class="overflow-x-auto">
               <table class="table table-sm">
                 <thead>
                   <tr>
                     <th>Seuil</th>
-                    <th>Recompense</th>
+                    <th>Récompense</th>
                     <th>Statut</th>
                   </tr>
                 </thead>
@@ -128,7 +131,7 @@
                     <td class="font-bold">{{ tier.threshold }}</td>
                     <td>{{ tier.reward }}</td>
                     <td>
-                      <span v-if="state.monthProgress.shared >= tier.threshold" class="badge badge-success">Debloque</span>
+                      <span v-if="state.monthProgress.shared >= tier.threshold" class="badge badge-success">Débloqué</span>
                       <span v-else class="badge badge-ghost">{{ tier.threshold - state.monthProgress.shared }} restants</span>
                     </td>
                   </tr>

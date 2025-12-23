@@ -56,13 +56,13 @@
           </div>
         </div>
 
-        <!-- Recompenses disponibles -->
+        <!-- Récompenses disponibles -->
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title">Recompenses disponibles</h2>
+            <h2 class="card-title">Récompenses disponibles</h2>
 
             <div v-if="rewards.length === 0" class="text-center py-4 opacity-70">
-              Aucune recompense disponible pour le moment
+              Aucune récompense disponible pour le moment
             </div>
 
             <div v-else class="space-y-3">
@@ -117,7 +117,7 @@
           </div>
         </div>
 
-        <button class="btn btn-ghost w-full" @click="logout">Deconnexion</button>
+        <button class="btn btn-ghost w-full" @click="logout">Déconnexion</button>
       </div>
     </template>
   </main>
@@ -231,9 +231,9 @@ function logout() {
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     pending: 'En attente',
-    approved: 'Approuve',
-    rejected: 'Refuse',
-    claimed: 'Recupere'
+    approved: 'Approuvé',
+    rejected: 'Refusé',
+    claimed: 'Récupéré'
   }
   return labels[status] || status
 }

@@ -43,11 +43,11 @@ export default defineEventHandler(async (event) => {
   if (!family) {
     throw createError({
       statusCode: 404,
-      message: 'Famille non trouvee'
+      message: 'Famille non trouvée'
     })
   }
 
-  // Determiner quelle semaine afficher (par defaut: semaine courante)
+  // Déterminer quelle semaine afficher (par défaut : semaine courante)
   let weekStart: Date
   const currentWeekStart = getWeekStart(new Date())
 
@@ -65,16 +65,16 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  // Calculer semaine precedente et suivante
+  // Calculer semaine précédente et suivante
   const prevWeekStart = new Date(weekStart)
   prevWeekStart.setDate(prevWeekStart.getDate() - 7)
   const nextWeekStart = new Date(weekStart)
   nextWeekStart.setDate(nextWeekStart.getDate() + 7)
 
-  // Verifier si on est sur la semaine courante
+  // Vérifier si on est sur la semaine courante
   const isCurrentWeek = weekStart.getTime() === currentWeekStart.getTime()
 
-  // Recuperer le progres du mois en cours
+  // Récupérer le progrès du mois en cours
   const now = new Date()
   const monthProgress = await prisma.monthProgress.findUnique({
     where: {
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  // Ne pas exposer les PINs dans la reponse GET publique
+  // Ne pas exposer les PINs dans la réponse GET publique
   const { adminPin, ...familyData } = family
   const childrenWithoutPin = familyData.children.map(({ pin, ...child }) => child)
 
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
       prevWeek: prevWeekStart.toISOString(),
       nextWeek: nextWeekStart.toISOString(),
       isCurrentWeek,
-      canGoNext: !isCurrentWeek // Ne pas naviguer au-dela de la semaine courante
+      canGoNext: !isCurrentWeek // Ne pas naviguer au-delà de la semaine courante
     }
   }
 })

@@ -1,25 +1,60 @@
 <template>
   <main class="wrap">
-    <!-- Header -->
-    <header class="text-center my-8">
-      <div class="flex justify-center items-center gap-4 mb-2">
-        <a href="https://cyriongames.fr" class="btn btn-ghost btn-sm">
-          <span class="mr-1">&#8592;</span> Portail
-        </a>
-        <ThemeToggle />
-      </div>
-      <h1 class="text-4xl font-black tracking-widest mb-2">
-        <span class="text-primary drop-shadow">MISSION COOP</span>
-      </h1>
-      <p class="opacity-70">Etoiles partagees - Paliers mensuels</p>
-    </header>
+    <!-- Loading auth -->
+    <div v-if="isLoading" class="flex justify-center items-center min-h-screen">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
 
-    <div class="max-w-md mx-auto space-y-6">
+    <!-- Accès refusé -->
+    <div v-else-if="!hasAccess" class="flex flex-col justify-center items-center min-h-screen text-center px-4">
+      <div class="text-6xl mb-6">🚫</div>
+      <h1 class="text-2xl font-bold mb-4">Accès non autorisé</h1>
+      <p class="opacity-70 mb-6" v-if="!isAuthenticated">
+        Vous devez vous connecter pour accéder à cette application.
+      </p>
+      <p class="opacity-70 mb-6" v-else>
+        Vous n'avez pas les droits d'accès à cette application.
+      </p>
+      <div class="flex gap-4">
+        <button v-if="!isAuthenticated" @click="login" class="btn btn-primary">
+          Se connecter
+        </button>
+        <button @click="redirectToPortal" class="btn btn-ghost">
+          Retour au portail
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div v-else>
+      <!-- Header -->
+      <header class="text-center my-8">
+        <div class="flex justify-between items-center max-w-md mx-auto mb-2">
+          <a href="https://cyriongames.fr" class="btn btn-ghost btn-sm">
+            <span class="mr-1">&#8592;</span> Portail
+          </a>
+          <div class="flex items-center gap-2">
+            <span class="text-sm opacity-70">{{ authUser?.name }}</span>
+            <button @click="logout" class="btn btn-ghost btn-sm btn-circle" title="Déconnexion">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+            <ThemeToggle />
+          </div>
+        </div>
+        <h1 class="text-4xl font-black tracking-widest mb-2">
+          <span class="text-primary drop-shadow">MISSION COOP</span>
+        </h1>
+        <p class="opacity-70">Étoiles partagées - Paliers mensuels</p>
+      </header>
+
+      <div class="max-w-md mx-auto space-y-6">
       <!-- Rejoindre une famille -->
       <section class="card bg-base-200 shadow-xl">
         <div class="card-body">
           <h2 class="card-title text-2xl">Rejoindre une famille</h2>
-          <p class="opacity-70">Entrez le code PIN a 6 chiffres de votre famille</p>
+          <p class="opacity-70">Entrez le code PIN à 6 chiffres de votre famille</p>
 
           <div class="form-control">
             <input
@@ -54,7 +89,7 @@
       <div class="collapse collapse-arrow bg-base-200 shadow-xl">
         <input type="checkbox" />
         <div class="collapse-title text-xl font-medium">
-          Creer une nouvelle famille
+          Créer une nouvelle famille
         </div>
         <div class="collapse-content">
           <div class="space-y-4 pt-2">
@@ -83,7 +118,7 @@
                 @input="familyPin = familyPin.replace(/\D/g, '')"
               />
               <label class="label">
-                <span class="label-text-alt opacity-70">Ce code permettra a tous de rejoindre la famille</span>
+                <span class="label-text-alt opacity-70">Ce code permettra à tous de rejoindre la famille</span>
               </label>
             </div>
 
@@ -95,7 +130,7 @@
                 type="text"
                 v-model="child.name"
                 class="input input-bordered flex-1"
-                :placeholder="'Prenom enfant ' + (i + 1)"
+                :placeholder="'Prénom enfant ' + (i + 1)"
               />
               <button
                 v-if="newChildren.length > 1"
@@ -115,7 +150,7 @@
                 :disabled="isCreating || !familyName.trim() || familyPin.length !== 6"
               >
                 <span v-if="isCreating" class="loading loading-spinner loading-sm"></span>
-                Creer la famille
+                Créer la famille
               </button>
             </div>
 
@@ -125,9 +160,9 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
 
-    <!-- Emoji Picker Modal -->
+      <!-- Emoji Picker Modal -->
     <dialog ref="emojiModal" class="modal">
       <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">Choisir un emoji</h3>
@@ -146,14 +181,20 @@
         <button>fermer</button>
       </form>
     </dialog>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const { isAuthenticated, user: authUser, isLoading, hasAccess, initKeycloak, login, logout, redirectToPortal } = useAuth()
+
+onMounted(() => {
+  initKeycloak()
+})
 
 // Create family
 const familyName = ref('')
@@ -206,7 +247,7 @@ async function createFamily() {
 
   const validChildren = newChildren.filter(c => c.name.trim())
   if (validChildren.length === 0) {
-    createError.value = 'Ajoutez au moins un enfant avec un prenom'
+    createError.value = 'Ajoutez au moins un enfant avec un prénom'
     return
   }
 
@@ -228,7 +269,7 @@ async function createFamily() {
 
     router.push('/family/' + family.code)
   } catch (e: any) {
-    createError.value = e.data?.message || 'Erreur lors de la creation'
+    createError.value = e.data?.message || 'Erreur lors de la création'
   } finally {
     isCreating.value = false
   }
@@ -245,7 +286,7 @@ async function joinFamily() {
     router.push('/family/' + joinCode.value)
   } catch (e: any) {
     if (e.status === 404) {
-      joinError.value = 'Famille non trouvee. Verifiez le code PIN.'
+      joinError.value = 'Famille non trouvée. Vérifiez le code PIN.'
     } else {
       joinError.value = e.data?.message || 'Erreur lors de la recherche'
     }

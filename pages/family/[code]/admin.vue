@@ -7,7 +7,7 @@
       </h1>
     </header>
 
-    <!-- Setup PIN admin (premiere fois) -->
+    <!-- Setup PIN admin (première fois) -->
     <div v-if="needsSetup" class="max-w-sm mx-auto">
       <div class="card bg-base-200 shadow-xl">
         <div class="card-body">
@@ -73,7 +73,7 @@
               <h2 class="card-title">Vies de la semaine</h2>
               <div class="flex items-center gap-2">
                 <button class="btn btn-sm btn-ghost" @click="goToPrevWeek">
-                  ← Precedente
+                  ← Précédente
                 </button>
                 <span class="badge badge-lg">{{ weekLabel }}</span>
                 <button
@@ -139,14 +139,14 @@
 
             <div v-if="isCurrentWeek" class="flex gap-2 mt-4">
               <button class="btn btn-warning btn-sm" @click="closeWeek">
-                Cloturer la semaine
+                Clôturer la semaine
               </button>
               <button class="btn btn-ghost btn-sm" @click="resetWeek">
-                Reinitialiser
+                Réinitialiser
               </button>
             </div>
             <div v-else class="alert alert-info mt-4">
-              Semaine passee - Consultation uniquement
+              Semaine passée - Consultation uniquement
             </div>
           </div>
         </div>
@@ -267,10 +267,10 @@
         <!-- Gestion des recompenses -->
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title">Recompenses ({{ rewards.length }})</h2>
+            <h2 class="card-title">Récompenses ({{ rewards.length }})</h2>
 
             <div v-if="rewards.length === 0" class="text-center py-4 opacity-70">
-              Aucune recompense configuree. Ajoutez-en ci-dessous.
+              Aucune récompense configurée. Ajoutez-en ci-dessous.
             </div>
 
             <div v-else class="overflow-x-auto">
@@ -279,7 +279,7 @@
                   <tr>
                     <th>Nom</th>
                     <th>Description</th>
-                    <th>Cout</th>
+                    <th>Coût</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -298,7 +298,7 @@
               </table>
             </div>
 
-            <div class="divider">Ajouter une recompense</div>
+            <div class="divider">Ajouter une récompense</div>
 
             <div class="space-y-2">
               <div class="flex gap-2 flex-wrap">
@@ -306,13 +306,13 @@
                   type="text"
                   class="input input-bordered flex-1"
                   v-model="newReward.name"
-                  placeholder="Nom de la recompense"
+                  placeholder="Nom de la récompense"
                 />
                 <input
                   type="number"
                   class="input input-bordered w-24"
                   v-model.number="newReward.cost"
-                  placeholder="Cout"
+                  placeholder="Coût"
                 />
               </div>
               <div class="flex gap-2">
@@ -334,7 +334,7 @@
           </div>
         </div>
 
-        <button class="btn btn-ghost w-full" @click="logout">Deconnexion</button>
+        <button class="btn btn-ghost w-full" @click="logout">Déconnexion</button>
       </div>
     </template>
   </main>
@@ -456,7 +456,7 @@ async function incrementLives(dayIndex: number, childId: number, amount: number)
   const currentLives = getLives(dayIndex, childId)
   const newLives = currentLives + amount
 
-  // Mettre a jour localement
+  // Mettre à jour localement
   const existing = weekGrids.value.find(w => w.dayIndex === dayIndex && w.childId === childId)
   if (existing) {
     existing.lives = newLives
@@ -475,7 +475,7 @@ async function incrementLives(dayIndex: number, childId: number, amount: number)
   }
 }
 
-// Decrementer les vies
+// Décrémenter les vies
 async function decrementLives(dayIndex: number, childId: number) {
   const currentLives = getLives(dayIndex, childId)
   if (currentLives <= 0) return
@@ -497,24 +497,24 @@ async function decrementLives(dayIndex: number, childId: number) {
   }
 }
 
-// Cloturer la semaine
+// Clôturer la semaine
 async function closeWeek() {
-  if (!confirm('Cloturer la semaine et ajouter les points au total mensuel ?')) return
+  if (!confirm('Clôturer la semaine et ajouter les points au total mensuel ?')) return
 
   try {
     const response = await $fetch(`/api/family/${code}/week/close`, {
       method: 'POST'
     }) as any
-    alert(`Semaine cloturee ! ${response.weekTotal} points ajoutes. Total mensuel: ${response.monthTotal}`)
+    alert(`Semaine clôturée ! ${response.weekTotal} points ajoutés. Total mensuel : ${response.monthTotal}`)
     weekGrids.value = []
   } catch (e: any) {
     alert(e.data?.message || 'Erreur')
   }
 }
 
-// Reinitialiser la semaine
+// Réinitialiser la semaine
 async function resetWeek() {
-  if (!confirm('Reinitialiser la grille de la semaine ?')) return
+  if (!confirm('Réinitialiser la grille de la semaine ?')) return
 
   weekGrids.value = []
   try {
@@ -576,14 +576,14 @@ async function loadStats() {
 }
 
 onMounted(async () => {
-  // Verifier si la famille a un admin PIN configure
+  // Vérifier si la famille a un admin PIN configuré
   try {
     const family = await $fetch(`/api/family/${code}`) as any
     if (!family.adminPin) {
       needsSetup.value = true
     }
   } catch (e) {
-    // Famille non trouvee
+    // Famille non trouvée
   }
 })
 
@@ -632,7 +632,7 @@ async function login() {
       weekLabel.value = response.weekInfo.weekLabel
       isCurrentWeek.value = response.weekInfo.isCurrentWeek
     } else {
-      // Charger les infos de semaine separement
+      // Charger les infos de semaine séparément
       await loadWeekData()
     }
 
@@ -655,7 +655,7 @@ async function approvePurchase(purchaseId: number, action: string) {
     })
     pendingPurchases.value = pendingPurchases.value.filter(p => p.id !== purchaseId)
 
-    // Recharger les enfants pour mettre a jour les points
+    // Recharger les enfants pour mettre à jour les points
     const response = await $fetch(`/api/family/${code}/admin/login`, {
       method: 'POST',
       body: { pin: adminPin.value }
@@ -743,7 +743,7 @@ async function addReward() {
 }
 
 async function deleteReward(rewardId: number) {
-  if (!confirm('Supprimer cette recompense ?')) return
+  if (!confirm('Supprimer cette récompense ?')) return
 
   try {
     await $fetch(`/api/family/${code}/rewards/${rewardId}`, {
