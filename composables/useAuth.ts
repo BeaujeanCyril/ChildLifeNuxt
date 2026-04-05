@@ -7,6 +7,7 @@ const keycloakConfig = {
 }
 
 let keycloakInstance: Keycloak | null = null
+let keycloakInitialized = false
 
 export const useAuth = () => {
   const isAuthenticated = useState<boolean>('isAuthenticated', () => false)
@@ -16,6 +17,12 @@ export const useAuth = () => {
 
   const initKeycloak = async () => {
     if (typeof window === 'undefined') {
+      isLoading.value = false
+      return
+    }
+
+    // Ne pas ré-initialiser si déjà fait
+    if (keycloakInitialized && keycloakInstance) {
       isLoading.value = false
       return
     }
@@ -31,6 +38,7 @@ export const useAuth = () => {
         pkceMethod: 'S256'
       })
 
+      keycloakInitialized = true
       isAuthenticated.value = authenticated
 
       if (authenticated && keycloakInstance.tokenParsed) {

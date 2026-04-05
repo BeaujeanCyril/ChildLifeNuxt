@@ -334,6 +334,38 @@
           </div>
         </div>
 
+        <!-- Paramètres notifications -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Notifications</h2>
+            <p class="opacity-70">Recevez un rappel par email chaque dimanche si la semaine n'a pas été complétée.</p>
+
+            <div class="flex gap-2">
+              <input
+                type="email"
+                class="input input-bordered flex-1"
+                v-model="notificationEmail"
+                placeholder="votre@email.com"
+              />
+              <button
+                class="btn btn-primary"
+                @click="saveNotificationEmail"
+                :disabled="isSavingEmail"
+              >
+                <span v-if="isSavingEmail" class="loading loading-spinner loading-sm"></span>
+                Enregistrer
+              </button>
+            </div>
+
+            <div v-if="emailSaved" class="alert alert-success mt-2">
+              Email enregistré avec succès
+            </div>
+            <div v-if="emailError" class="alert alert-error mt-2">
+              {{ emailError }}
+            </div>
+          </div>
+        </div>
+
         <button class="btn btn-ghost w-full" @click="logout">Déconnexion</button>
       </div>
     </template>
@@ -386,6 +418,12 @@ const statsLoading = ref(false)
 
 const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const newReward = reactive({ name: '', cost: 0, description: '' })
+
+// Notifications
+const notificationEmail = ref('')
+const isSavingEmail = ref(false)
+const emailSaved = ref(false)
+const emailError = ref('')
 
 // Options graphiques
 const chartOptions = {
@@ -638,8 +676,9 @@ async function login() {
 
     isLoggedIn.value = true
 
-    // Charger les stats
+    // Charger les stats et les paramètres
     loadStats()
+    loadNotificationEmail()
   } catch (e: any) {
     loginError.value = e.data?.message || 'Erreur de connexion'
   } finally {
@@ -753,6 +792,37 @@ async function deleteReward(rewardId: number) {
     rewards.value = rewards.value.filter(r => r.id !== rewardId)
   } catch (e: any) {
     alert(e.data?.message || 'Erreur')
+  }
+}
+
+async function loadNotificationEmail() {
+  try {
+    const settings = await $fetch(`/api/family/${code}/settings`) as any
+    notificationEmail.value = settings.notificationEmail || ''
+  } catch (e) {
+    // ignore
+  }
+}
+
+async function saveNotificationEmail() {
+  isSavingEmail.value = true
+  emailSaved.value = false
+  emailError.value = ''
+
+  try {
+    await $fetch(`/api/family/${code}/settings`, {
+      method: 'PUT',
+      body: {
+        adminPin: adminPin.value,
+        notificationEmail: notificationEmail.value
+      }
+    })
+    emailSaved.value = true
+    setTimeout(() => { emailSaved.value = false }, 3000)
+  } catch (e: any) {
+    emailError.value = e.data?.message || 'Erreur lors de la sauvegarde'
+  } finally {
+    isSavingEmail.value = false
   }
 }
 

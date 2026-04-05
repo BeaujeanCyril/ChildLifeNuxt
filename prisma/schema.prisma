@@ -12,12 +12,13 @@ datasource db {
 }
 
 model Family {
-  id           Int      @id @default(autoincrement())
-  name         String
-  code         String   @unique // Code unique pour rejoindre la famille (6 chars)
-  adminPin     String?  // PIN admin pour les parents (4 chiffres)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  name              String
+  code              String   @unique // Code unique pour rejoindre la famille (6 chars)
+  adminPin          String?  // PIN admin pour les parents (4 chiffres)
+  notificationEmail String?  // Email pour les rappels hebdomadaires
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   children      Child[]
   weekGrids     WeekGrid[]
