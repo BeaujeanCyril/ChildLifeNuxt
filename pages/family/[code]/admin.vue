@@ -108,14 +108,14 @@
                     <td v-for="child in children" :key="child.id">
                       <div class="flex items-center gap-1">
                         <template v-if="isCurrentWeek">
-                          <button
-                            class="btn btn-xs btn-ghost"
-                            @click="decrementLives(dayIndex, child.id)"
-                            :disabled="getLives(dayIndex, child.id) <= 0"
-                          >-</button>
                           <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
                             {{ getLives(dayIndex, child.id) }}
                           </span>
+                          <button
+                            class="btn btn-xs btn-error"
+                            @click="decrementLives(dayIndex, child.id)"
+                            :disabled="getLives(dayIndex, child.id) <= 0"
+                          >-1</button>
                           <button
                             class="btn btn-xs btn-success"
                             @click="incrementLives(dayIndex, child.id, 1)"
@@ -284,16 +284,61 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="reward in rewards" :key="reward.id">
-                    <td>{{ reward.name }}</td>
-                    <td class="opacity-70">{{ reward.description || '-' }}</td>
-                    <td>{{ reward.cost }} pts</td>
-                    <td>
-                      <button class="btn btn-sm btn-error" @click="deleteReward(reward.id)">
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
+                  <template v-for="reward in rewards" :key="reward.id">
+                    <tr v-if="editingRewardId !== reward.id">
+                      <td>{{ reward.name }}</td>
+                      <td class="opacity-70">{{ reward.description || '-' }}</td>
+                      <td>{{ reward.cost }} pts</td>
+                      <td class="flex gap-1">
+                        <button class="btn btn-sm btn-info" @click="startEditReward(reward)">
+                          Modifier
+                        </button>
+                        <button class="btn btn-sm btn-error" @click="deleteReward(reward.id)">
+                          Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-else class="bg-base-300">
+                      <td colspan="4">
+                        <div class="space-y-2 p-2">
+                          <div class="flex gap-2 flex-wrap items-center">
+                            <span class="text-3xl w-12 text-center">{{ editReward.icon || '❓' }}</span>
+                            <input
+                              type="text"
+                              class="input input-bordered input-sm flex-1"
+                              v-model="editReward.text"
+                              placeholder="Nom (sans emoji)"
+                            />
+                            <input
+                              type="number"
+                              class="input input-bordered input-sm w-24"
+                              v-model.number="editReward.cost"
+                              placeholder="Coût"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            class="input input-bordered input-sm w-full"
+                            v-model="editReward.description"
+                            placeholder="Description (optionnel)"
+                          />
+                          <EmojiPicker v-model="editReward.icon" />
+                          <div class="flex gap-2">
+                            <button
+                              class="btn btn-sm btn-success"
+                              @click="saveEditReward"
+                              :disabled="!editReward.text || editReward.cost == null"
+                            >
+                              Enregistrer
+                            </button>
+                            <button class="btn btn-sm btn-ghost" @click="cancelEditReward">
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -301,12 +346,13 @@
             <div class="divider">Ajouter une récompense</div>
 
             <div class="space-y-2">
-              <div class="flex gap-2 flex-wrap">
+              <div class="flex gap-2 flex-wrap items-center">
+                <span class="text-3xl w-12 text-center">{{ newReward.icon || '❓' }}</span>
                 <input
                   type="text"
                   class="input input-bordered flex-1"
-                  v-model="newReward.name"
-                  placeholder="Nom de la récompense"
+                  v-model="newReward.text"
+                  placeholder="Nom (sans emoji)"
                 />
                 <input
                   type="number"
@@ -315,21 +361,20 @@
                   placeholder="Coût"
                 />
               </div>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  class="input input-bordered flex-1"
-                  v-model="newReward.description"
-                  placeholder="Description (optionnel)"
-                />
-                <button
-                  class="btn btn-primary"
-                  @click="addReward"
-                  :disabled="!newReward.name || !newReward.cost"
-                >
-                  Ajouter
-                </button>
-              </div>
+              <input
+                type="text"
+                class="input input-bordered w-full"
+                v-model="newReward.description"
+                placeholder="Description (optionnel)"
+              />
+              <EmojiPicker v-model="newReward.icon" />
+              <button
+                class="btn btn-primary w-full"
+                @click="addReward"
+                :disabled="!newReward.text || !newReward.cost"
+              >
+                Ajouter
+              </button>
             </div>
           </div>
         </div>
@@ -417,7 +462,21 @@ const stats = ref<any>(null)
 const statsLoading = ref(false)
 
 const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const newReward = reactive({ name: '', cost: 0, description: '' })
+const newReward = reactive({ icon: '🎁', text: '', cost: 0, description: '' })
+
+const editingRewardId = ref<number | null>(null)
+const editReward = reactive({ icon: '', text: '', cost: 0, description: '' })
+
+const EMOJI_RE = /^([\p{Extended_Pictographic}‍️]+)\s*/u
+function splitNameIcon(name: string): { icon: string; text: string } {
+  const m = name.match(EMOJI_RE)
+  if (m) return { icon: m[1], text: name.slice(m[0].length) }
+  return { icon: '', text: name }
+}
+function combineNameIcon(icon: string, text: string): string {
+  const t = text.trim()
+  return icon ? `${icon} ${t}` : t
+}
 
 // Notifications
 const notificationEmail = ref('')
@@ -760,22 +819,59 @@ async function addPoints(child: any, amount: number) {
 }
 
 async function addReward() {
-  if (!newReward.name || !newReward.cost) return
+  if (!newReward.text || !newReward.cost) return
 
   try {
     const reward = await $fetch(`/api/family/${code}/rewards/add`, {
       method: 'POST',
       body: {
-        name: newReward.name,
+        name: combineNameIcon(newReward.icon, newReward.text),
         cost: newReward.cost,
         description: newReward.description || null,
         adminPin: adminPin.value
       }
     })
     rewards.value.push(reward)
-    newReward.name = ''
+    newReward.icon = '🎁'
+    newReward.text = ''
     newReward.cost = 0
     newReward.description = ''
+  } catch (e: any) {
+    alert(e.data?.message || 'Erreur')
+  }
+}
+
+function startEditReward(reward: any) {
+  const { icon, text } = splitNameIcon(reward.name)
+  editingRewardId.value = reward.id
+  editReward.icon = icon
+  editReward.text = text
+  editReward.cost = reward.cost
+  editReward.description = reward.description || ''
+}
+
+function cancelEditReward() {
+  editingRewardId.value = null
+}
+
+async function saveEditReward() {
+  if (editingRewardId.value == null) return
+  if (!editReward.text || editReward.cost == null) return
+
+  const id = editingRewardId.value
+  try {
+    const updated = await $fetch(`/api/family/${code}/rewards/${id}`, {
+      method: 'PUT',
+      body: {
+        name: combineNameIcon(editReward.icon, editReward.text),
+        cost: editReward.cost,
+        description: editReward.description || null,
+        adminPin: adminPin.value
+      }
+    }) as any
+    const idx = rewards.value.findIndex(r => r.id === id)
+    if (idx !== -1) rewards.value[idx] = updated
+    editingRewardId.value = null
   } catch (e: any) {
     alert(e.data?.message || 'Erreur')
   }
