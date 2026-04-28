@@ -65,7 +65,7 @@
 
     <!-- Dashboard admin -->
     <template v-else>
-      <div class="max-w-2xl mx-auto space-y-6">
+      <div class="max-w-3xl mx-auto space-y-6">
         <!-- Navigation semaine -->
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body">
@@ -284,17 +284,17 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <template v-for="reward in rewards" :key="reward.id">
+                  <template v-for="reward in sortedRewards" :key="reward.id">
                     <tr v-if="editingRewardId !== reward.id">
                       <td>{{ reward.name }}</td>
                       <td class="opacity-70">{{ reward.description || '-' }}</td>
-                      <td>{{ reward.cost }} pts</td>
+                      <td class="whitespace-nowrap">{{ reward.cost }} pts</td>
                       <td class="flex gap-1">
-                        <button class="btn btn-sm btn-info" @click="startEditReward(reward)">
-                          Modifier
+                        <button class="btn btn-sm btn-info btn-square" title="Modifier" @click="startEditReward(reward)">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
                         </button>
-                        <button class="btn btn-sm btn-error" @click="deleteReward(reward.id)">
-                          Supprimer
+                        <button class="btn btn-sm btn-error btn-square" title="Supprimer" @click="deleteReward(reward.id)">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                         </button>
                       </td>
                     </tr>
@@ -466,6 +466,8 @@ const newReward = reactive({ icon: '🎁', text: '', cost: 0, description: '' })
 
 const editingRewardId = ref<number | null>(null)
 const editReward = reactive({ icon: '', text: '', cost: 0, description: '' })
+
+const sortedRewards = computed(() => [...rewards.value].sort((a, b) => a.cost - b.cost))
 
 const EMOJI_RE = /^([\p{Extended_Pictographic}‍️]+)\s*/u
 function splitNameIcon(name: string): { icon: string; text: string } {
