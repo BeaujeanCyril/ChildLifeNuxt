@@ -112,11 +112,6 @@
                             {{ getLives(dayIndex, child.id) }}
                           </span>
                           <button
-                            class="btn btn-xs btn-error"
-                            @click="decrementLives(dayIndex, child.id)"
-                            :disabled="getLives(dayIndex, child.id) <= 0"
-                          >-1</button>
-                          <button
                             class="btn btn-xs btn-success"
                             @click="incrementLives(dayIndex, child.id, 1)"
                           >+1</button>
@@ -137,7 +132,10 @@
               </table>
             </div>
 
-            <div v-if="isCurrentWeek" class="flex gap-2 mt-4">
+            <div v-if="isCurrentWeek" class="flex gap-2 mt-4 flex-wrap">
+              <button class="btn btn-primary btn-sm" @click="fillWeekWith2" title="Remplir toutes les cases vides de la semaine avec 2">
+                +2 global
+              </button>
               <button class="btn btn-warning btn-sm" @click="closeWeek">
                 Clôturer la semaine
               </button>
@@ -244,18 +242,35 @@
                       />
                     </td>
                     <td>
-                      <input
-                        type="password"
-                        maxlength="4"
-                        class="input input-bordered input-sm w-20 text-center"
-                        :value="child.pin || ''"
-                        placeholder="****"
-                        @change="updateChildPin(child, $event)"
-                      />
+                      <div class="flex items-center gap-1">
+                        <input
+                          :type="revealedPinChildId === child.id ? 'text' : 'password'"
+                          maxlength="4"
+                          class="input input-bordered input-sm w-20 text-center"
+                          :value="child.pin || ''"
+                          placeholder="****"
+                          @change="updateChildPin(child, $event)"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-ghost btn-square"
+                          title="Survoler pour afficher"
+                          @mouseenter="revealedPinChildId = child.id"
+                          @mouseleave="revealedPinChildId = null"
+                          @focus="revealedPinChildId = child.id"
+                          @blur="revealedPinChildId = null"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                      </div>
                     </td>
                     <td>
-                      <button class="btn btn-sm btn-ghost" @click="addPoints(child, 1)">+1</button>
-                      <button class="btn btn-sm btn-ghost" @click="addPoints(child, 5)">+5</button>
+                      <div class="flex gap-1 flex-wrap">
+                        <button class="btn btn-sm btn-error" @click="addPoints(child, -5)">-5</button>
+                        <button class="btn btn-sm btn-error btn-outline" @click="addPoints(child, -1)">-1</button>
+                        <button class="btn btn-sm btn-success btn-outline" @click="addPoints(child, 1)">+1</button>
+                        <button class="btn btn-sm btn-success" @click="addPoints(child, 5)">+5</button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -469,6 +484,8 @@ const editReward = reactive({ icon: '', text: '', cost: 0, description: '' })
 
 const sortedRewards = computed(() => [...rewards.value].sort((a, b) => a.cost - b.cost))
 
+const revealedPinChildId = ref<number | null>(null)
+
 const EMOJI_RE = /^([\p{Extended_Pictographic}‍️]+)\s*/u
 function splitNameIcon(name: string): { icon: string; text: string } {
   const m = name.match(EMOJI_RE)
@@ -574,16 +591,17 @@ async function incrementLives(dayIndex: number, childId: number, amount: number)
   }
 }
 
-// Décrémenter les vies
-async function decrementLives(dayIndex: number, childId: number) {
-  const currentLives = getLives(dayIndex, childId)
-  if (currentLives <= 0) return
+// Auto-complete toutes les cases vides de la semaine avec 2
+async function fillWeekWith2() {
+  if (!confirm('Remplir toutes les cases vides de la semaine avec +2 ? (les valeurs déjà saisies ne seront pas modifiées)')) return
 
-  const newLives = currentLives - 1
-
-  const existing = weekGrids.value.find(w => w.dayIndex === dayIndex && w.childId === childId)
-  if (existing) {
-    existing.lives = newLives
+  for (const child of children.value) {
+    for (let d = 0; d < 7; d++) {
+      const existing = weekGrids.value.find(w => w.dayIndex === d && w.childId === child.id)
+      if (!existing) {
+        weekGrids.value.push({ dayIndex: d, childId: child.id, lives: 2 })
+      }
+    }
   }
 
   try {
@@ -592,7 +610,7 @@ async function decrementLives(dayIndex: number, childId: number) {
       body: { weekGrids: weekGrids.value }
     })
   } catch (e) {
-    console.error('Erreur sauvegarde vies:', e)
+    console.error('Erreur fill week:', e)
   }
 }
 
