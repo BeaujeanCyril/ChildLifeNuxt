@@ -31,7 +31,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const weekStart = getWeekStart(new Date())
+  // weekStart peut etre passe pour modifier une semaine passee (modifications retroactives)
+  const weekStart = body.weekStart ? getWeekStart(new Date(body.weekStart)) : getWeekStart(new Date())
 
   // Mise a jour de la grille de la semaine
   if (body.weekGrids && Array.isArray(body.weekGrids)) {

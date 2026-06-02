@@ -113,9 +113,6 @@ export const useFamilyState = (familyCode: string) => {
   // Save state to API (debounced)
   async function save() {
     if (isLoading.value) return
-    // Ne sauvegarder que si on est sur la semaine courante
-    if (!state.weekInfo.isCurrentWeek) return
-
     if (saveTimeout) clearTimeout(saveTimeout)
     saveTimeout = setTimeout(async () => {
       try {
@@ -164,9 +161,6 @@ export const useFamilyState = (familyCode: string) => {
 
   // Actions
   function setLives(dayIndex: number, childId: number, lives: number) {
-    // Ne modifier que si on est sur la semaine courante
-    if (!state.weekInfo.isCurrentWeek) return
-
     const clamped = Math.max(0, Math.min(lives || 0, state.config.dailyMaxLives))
     const existing = state.weekGrids.find(w => w.dayIndex === dayIndex && w.childId === childId)
     if (existing) {
@@ -199,7 +193,6 @@ export const useFamilyState = (familyCode: string) => {
   }
 
   function resetWeek() {
-    if (!state.weekInfo.isCurrentWeek) return
     state.weekGrids = []
     save()
   }

@@ -107,24 +107,17 @@
                     <td class="font-bold">{{ label }}</td>
                     <td v-for="child in children" :key="child.id">
                       <div class="flex items-center gap-1">
-                        <template v-if="isCurrentWeek">
-                          <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
-                            {{ getLives(dayIndex, child.id) }}
-                          </span>
-                          <button
-                            class="btn btn-xs btn-success"
-                            @click="incrementLives(dayIndex, child.id, 1)"
-                          >+1</button>
-                          <button
-                            class="btn btn-xs btn-primary"
-                            @click="incrementLives(dayIndex, child.id, 2)"
-                          >+2</button>
-                        </template>
-                        <template v-else>
-                          <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
-                            {{ getLives(dayIndex, child.id) }}
-                          </span>
-                        </template>
+                        <span class="badge badge-lg min-w-[2rem]" :class="getLives(dayIndex, child.id) > 0 ? 'badge-success' : 'badge-ghost'">
+                          {{ getLives(dayIndex, child.id) }}
+                        </span>
+                        <button
+                          class="btn btn-xs btn-success"
+                          @click="incrementLives(dayIndex, child.id, 1)"
+                        >+1</button>
+                        <button
+                          class="btn btn-xs btn-primary"
+                          @click="incrementLives(dayIndex, child.id, 2)"
+                        >+2</button>
                       </div>
                     </td>
                   </tr>
@@ -132,20 +125,20 @@
               </table>
             </div>
 
-            <div v-if="isCurrentWeek" class="flex gap-2 mt-4 flex-wrap">
+            <div class="flex gap-2 mt-4 flex-wrap">
               <button class="btn btn-primary btn-sm" @click="fillWeekWith2" title="Remplir toutes les cases vides de la semaine avec 2">
                 +2 global
               </button>
-              <button class="btn btn-warning btn-sm" @click="closeWeek">
+              <button v-if="isCurrentWeek" class="btn btn-warning btn-sm" @click="closeWeek">
                 Clôturer la semaine
               </button>
               <button class="btn btn-ghost btn-sm" @click="resetWeek">
                 Réinitialiser
               </button>
             </div>
-            <div v-else class="alert alert-info mt-4">
-              Semaine passée - Consultation uniquement
-            </div>
+            <p v-if="!isCurrentWeek" class="text-xs opacity-60 mt-2">
+              ⚠️ Modifications rétroactives — les ajouts/retraits ici n'impactent pas automatiquement le total mensuel. Si nécessaire, ajuste les points enfants manuellement.
+            </p>
           </div>
         </div>
 
@@ -584,7 +577,7 @@ async function incrementLives(dayIndex: number, childId: number, amount: number)
   try {
     await $fetch(`/api/family/${code}`, {
       method: 'POST',
-      body: { weekGrids: weekGrids.value }
+      body: { weekGrids: weekGrids.value, weekStart: weekInfo.value?.weekStart }
     })
   } catch (e) {
     console.error('Erreur sauvegarde vies:', e)
@@ -607,7 +600,7 @@ async function fillWeekWith2() {
   try {
     await $fetch(`/api/family/${code}`, {
       method: 'POST',
-      body: { weekGrids: weekGrids.value }
+      body: { weekGrids: weekGrids.value, weekStart: weekInfo.value?.weekStart }
     })
   } catch (e) {
     console.error('Erreur fill week:', e)
@@ -637,7 +630,7 @@ async function resetWeek() {
   try {
     await $fetch(`/api/family/${code}`, {
       method: 'POST',
-      body: { weekGrids: [] }
+      body: { weekGrids: [], weekStart: weekInfo.value?.weekStart }
     })
   } catch (e) {
     console.error('Erreur reset semaine:', e)
